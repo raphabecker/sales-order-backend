@@ -1,9 +1,15 @@
 {
+  // Versão do formato de configuração de tarefas do VS Code.
   "version": "2.0.0",
+  // Lista de tarefas que você pode executar pelo VS Code.
   "tasks": [
     {
+      // Executa o comando usando o shell do terminal, como o Bash.
       "type": "shell",
+      // Nome da tarefa exibido na opção "Tarefas: Executar Tarefa" do VS Code.
       "label": "cds watch",
+      // Inicia o servidor de desenvolvimento do SAP CAP e observa os arquivos
+      // do projeto para reiniciar o servidor quando houver alterações.
       "command": "cds watch",
     }
   ]
