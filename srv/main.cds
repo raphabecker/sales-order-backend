@@ -5,5 +5,8 @@ using { sales } from '../db/schema';
 service MainService {
     // Expõe a entidade do banco por uma projeção CDS, sem criar outra tabela.
     // Sem uma lista de campos, a projeção inclui todos os campos da entidade de origem.
-    eNtity SalesOrderHeaders as projection on sales.SalesOrderHeaders;
+    entity SalesOrderHeaders as projection on sales.SalesOrderHeaders;
+    entity Customers as projection on sales.Customers;
+    entity Products as projection on sales.Products;
+
 }
