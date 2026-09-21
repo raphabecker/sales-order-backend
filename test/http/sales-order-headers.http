@@ -1,0 +1,23 @@
+# Arquivo de testes HTTP: execute cada requisição pelo cliente REST do editor.
+# As linhas com ### separam as requisições para execução independente.
+
+# Consulta os cabeçalhos via OData V4; semelhante à leitura de uma coleção no SAP Gateway.
+# localhost:4004 aponta para o CAP local; main é o caminho do serviço.
+GET http://localhost:4004/odata/v4/main/SalesOrderHeaders
+# Informa o formato do corpo enviado; GET não envia corpo nesta requisição.
+Content-Type: application/json
+
+###
+# Cria um cabeçalho com os dados JSON abaixo, equivalente à operação CREATE no Gateway.
+# Content-Type indica que o corpo enviado está em JSON.
+POST http://localhost:4004/odata/v4/main/SalesOrderHeaders
+Content-Type: application/json
+
+{
+    "id": "1234"
+}
+
+###
+# Exclui o cabeçalho identificado pela chave id; equivalente à operação DELETE no Gateway.
+DELETE  http://localhost:4004/odata/v4/main/SalesOrderHeaders(id=1234)
+Content-Type: application/json
