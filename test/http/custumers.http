@@ -1,0 +1,30 @@
+@localhost=localhost:4004/odata/v4/main
+
+@id=27cb0d6b-674d-46bf-b3c5-d9aacce16738
+
+GET http://localhost:4004/odata/v4/main/SalesOrderHeaders
+# Informa o formato do corpo enviado; GET não envia corpo nesta requisição.
+Content-Type: application/json
+
+###
+POST http://{{localhost}}/Customers
+Content-Type: application/json
+
+{
+    "id": "{{id}}",
+    "firstName": "Lucas",
+    "lastName": "Cardoso",
+    "email": "lucas.cardoso@moovi.com"
+}
+
+DELETE http://{{localhost}}/Customers(id={{id}})
+Content-Type: application/json
+
+###
+
+PATCH http://{{localhost}}/Customers(id={{id}})
+Content-Type: application/json
+
+{
+    "firsName": "John"
+}
