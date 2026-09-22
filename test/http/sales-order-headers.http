@@ -1,9 +1,12 @@
 # Arquivo de testes HTTP: execute cada requisição pelo cliente REST do editor.
 # As linhas com ### separam as requisições para execução independente.
 @localhost=localhost:4004/odata/v4/main
+@id=27cb0d6b-674d-46bf-b3c5-d9aacce16738
+@customerId=4281de7d-f0bc-4514-9b43-349a7df523b4
+@productId=8dd64f22-69d8-4141-b402-9216d5677437
 # Consulta os cabeçalhos via OData V4; semelhante à leitura de uma coleção no SAP Gateway.
 # localhost:4004 aponta para o CAP local; main é o caminho do serviço.
-GET http://localhost:4004/odata/v4/main/SalesOrderHeaders
+GET http://localhost:4004/odata/v4/main/SalesOrderHeaders?$filter=id eq {{id}}&$expand=items 
 # Informa o formato do corpo enviado; GET não envia corpo nesta requisição.
 Content-Type: application/json
 
@@ -14,9 +17,26 @@ POST http://localhost:4004/odata/v4/main/SalesOrderHeaders
 Content-Type: application/json
 
 {
-    "id": "1234"
+    "id": "{{id}}",
+    "customer_id": "{{customerId}}",
+    "totalAmount": 398,
+    "items": [
+        {
+            "id": "",
+            "header_id": "a5bfe73f-34c7-475e-9f1e-dd1a2c369aaf",
+            "product_id": "{{productId}}",
+            "quantity": 10,
+            "price": 2.99
+        },
+        {
+            "id": "",
+            "header_id": "1221b741-4815-4f53-8741-1a38ef048fd8",
+            "product_id": "{{productId}}",
+            "quantity": 5,
+            "price": 1.99
+        }
+    ]
 }
-
 ###
 # Exclui o cabeçalho identificado pela chave id; equivalente à operação DELETE no Gateway.
 DELETE  http://localhost:4004/odata/v4/main/SalesOrderHeaders(id=1234)
