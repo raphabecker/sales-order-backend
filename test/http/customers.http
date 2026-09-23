@@ -11,12 +11,13 @@ POST http://{{localhost}}/Customers
 Content-Type: application/json
 
 {
-    "id": "{{id}}",
+   // "id": "{{id}}",
     "firstName": "Lucas",
     "lastName": "Cardoso",
     "email": "lucas.cardoso@moovi.com"
 }
 
+###
 DELETE http://{{localhost}}/Customers(id={{id}})
 Content-Type: application/json
 
@@ -28,3 +29,6 @@ Content-Type: application/json
 {
     "firsName": "John"
 }
+
+###
+GET http://{{localhost}}/Customers?$filter=not endswith(firstName,'-3837314')
