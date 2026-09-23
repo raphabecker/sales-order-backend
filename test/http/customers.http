@@ -1,12 +1,14 @@
+# Conceitos comuns de HTTP e variáveis estão comentados em sales-order-headers.http.
 @localhost=localhost:4004/odata/v4/main
 
 @id=27cb0d6b-674d-46bf-b3c5-d9aacce16738
 
+# Esta consulta ainda aponta para pedidos, embora esteja no arquivo de clientes.
 GET http://localhost:4004/odata/v4/main/SalesOrderHeaders
-# Informa o formato do corpo enviado; GET não envia corpo nesta requisição.
 Content-Type: application/json
 
 ###
+# Cria somente o cliente, sem itens aninhados; o id está comentado no corpo abaixo.
 POST http://{{localhost}}/Customers
 Content-Type: application/json
 
@@ -18,11 +20,14 @@ Content-Type: application/json
 }
 
 ###
+# Usa a variável id para identificar o cliente a excluir.
 DELETE http://{{localhost}}/Customers(id={{id}})
 Content-Type: application/json
 
 ###
 
+# PATCH atualiza apenas os campos enviados, como UPDATE ... SET em ABAP.
+# O corpo usa firsName, mas o campo declarado no modelo é firstName.
 PATCH http://{{localhost}}/Customers(id={{id}})
 Content-Type: application/json
 
@@ -31,4 +36,15 @@ Content-Type: application/json
 }
 
 ###
+# Exclui do resultado os clientes cujo firstName termina com o sufixo indicado.
 GET http://{{localhost}}/Customers?$filter=not endswith(firstName,'-3837314')
+
+###
+# Aqui, o termo buscado é o texto "firstName2", não um nome de campo.
+GET http://{{localhost}}/Customers?$search=firstName2
+Content-Type: application/json
+
+###
+# Ordena por nome em ordem crescente, equivalente a ORDER BY firstName ASCENDING em ABAP.
+GET http://{{localhost}}/Customers?$orderby=firstName asc
+Content-Type: application/json

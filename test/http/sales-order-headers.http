@@ -1,18 +1,19 @@
-# Arquivo de testes HTTP: execute cada requisição pelo cliente REST do editor.
-# As linhas com ### separam as requisições para execução independente.
+# Testes HTTP: cada separador abaixo inicia uma requisição independente.
+# @ define variáveis do cliente REST; {{nome}} insere seu valor na requisição.
+# Content-Type declara o corpo como JSON; nas consultas sem corpo, é dispensável.
+# Endereço do CAP local e caminho do serviço MainService.
 @localhost=localhost:4004/odata/v4/main
 @id=27cb0d6b-674d-46bf-b3c5-d9aacce16738
 @customerId=4281de7d-f0bc-4514-9b43-349a7df523b4
 @productId=8dd64f22-69d8-4141-b402-9216d5677437
-# Consulta os cabeçalhos via OData V4; semelhante à leitura de uma coleção no SAP Gateway.
-# localhost:4004 aponta para o CAP local; main é o caminho do serviço.
+# $filter seleciona o pedido pela chave (como WHERE no ABAP SQL); $expand inclui seus itens.
 GET http://localhost:4004/odata/v4/main/SalesOrderHeaders?$filter=id eq {{id}}&$expand=items 
-# Informa o formato do corpo enviado; GET não envia corpo nesta requisição.
 Content-Type: application/json
 
 ###
-# Cria um cabeçalho com os dados JSON abaixo, equivalente à operação CREATE no Gateway.
-# Content-Type indica que o corpo enviado está em JSON.
+# POST cria o pedido; items envia os filhos da Composition junto com o cabeçalho (deep insert).
+# customers_id e product_id são chaves das associações, como referências entre tabelas ABAP.
+# Os itens têm id vazio e header_id diferente do cabeçalho; revise esses valores antes de testar.
 POST http://localhost:4004/odata/v4/main/SalesOrderHeaders
 Content-Type: application/json
 
@@ -38,12 +39,14 @@ Content-Type: application/json
     ]
 }
 ###
-# Exclui o cabeçalho identificado pela chave id; equivalente à operação DELETE no Gateway.
+# DELETE remove pela chave; 1234 não corresponde ao tipo UUID definido no modelo.
 DELETE  http://localhost:4004/odata/v4/main/SalesOrderHeaders(id=1234)
 Content-Type: application/json
 
 ###
 
+# PUT envia uma atualização; para um pedido específico, a URL precisa identificar sua chave.
+# modifieBy não existe no modelo; o campo de auditoria é modifiedBy, gerenciado pelo CAP.
 PUT http://{{localhost}}/SalesOrderHeaders
 Content-Type: application/json
 
@@ -53,4 +56,31 @@ Content-Type: application/json
 
 ###
 
+# le significa menor ou igual (<=); filtra pedidos pelo valor total.
 GET http://localhost:4004/odata/v4/main/SalesOrderHeaders?$filter=totalAmount le 2000000
+
+###
+
+# Aqui, inclui itens de todos os pedidos retornados, sem filtrar uma chave.
+GET http://localhost:4004/odata/v4/main/SalesOrderHeaders?$expand=items
+
+###
+# $select limita as propriedades retornadas, como a lista de colunas de um SELECT ABAP.
+# customer não existe no modelo atual; a associação se chama customers.
+GET http://{{localhost}}/SalesOrderHeaders?$select=id,customer
+
+###
+# Retorna apenas a quantidade de pedidos, semelhante a SELECT COUNT(*) em ABAP.
+GET http://{{localhost}}/SalesOrderHeaders/$count
+
+###
+# Pula os cinco primeiros registros; combine com $top e $orderby para paginação ordenada.
+GET http://{{localhost}}/SalesOrderHeaders?$skip=5
+
+###
+# Limita o retorno a cinco registros, semelhante a UP TO 5 ROWS em ABAP.
+GET http://{{localhost}}/SalesOrderHeaders?$top=5
+
+###
+# $search busca o texto "email" nos campos pesquisáveis; não seleciona a propriedade email.
+GET http://{{localhost}}/SalesOrderHeaders?$search=email
