@@ -6,12 +6,16 @@
     "@sap/cds": "^10"
   },
   "devDependencies": {
+    "@cap-js/cds-typer": "^0.41.1",
     "@cap-js/sqlite": "^3",
-    "git-commit-msg-linter": "^5.0.9"
+    "@types/node": "^26.6.2",
+    "git-commit-msg-linter": "^5.0.9",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
   },
   "scripts": {
     "start": "cds-serve",
-    "dev": "DEBUG=db cds watch"
+    "dev": "DEBUG=db cds-tsx watch"
   },
   "private": true
 }
