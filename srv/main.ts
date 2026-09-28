@@ -1,7 +1,7 @@
 // Importa a API do CAP e os tipos TypeScript usados para requisições e serviços.
 import cds, { Request, Service } from '@sap/cds';
-// Tipo gerado a partir do CDS; semelhante a usar um tipo do Dicionário ABAP.
-import type { Customers, Products, SalesOrderItem, SalesOrderItems } from '@models/sales';
+// import type traz apenas tipos gerados do CDS, como tipos DDIC; não carrega valores em execução.
+import type { Customers, Product, Products, SalesOrderHeaders, SalesOrderItem, SalesOrderItems } from '@models/sales';
 
 // Exporta a função que registra os handlers; a sintaxe => define uma função em JavaScript/TypeScript.
 export default (service: Service) => {
@@ -22,6 +22,7 @@ export default (service: Service) => {
     service.before('CREATE', 'SalesOrderHeaders', async (request: Request) => {
         // Acessa os dados recebidos; const impede reatribuir a variável, mas não torna o objeto imutável.
         const params = request.data;
+        // Tipagem da coleção de itens, semelhante à declaração de uma tabela interna ABAP.
         const items: SalesOrderItems = params.items;
         // Confere a referência ao cliente; o nome precisa coincidir com o campo exposto no serviço.
         if (!params.customer_id) {
@@ -40,18 +41,45 @@ export default (service: Service) => {
         if (!customer) {
             return request.reject(404, 'Customer não encontrado');
         }
+        // map cria um array de IDs a partir dos itens, semelhante a VALUE ... FOR em ABAP.
         const productsIds: string[] = params.items.map((item: SalesOrderItem) => item.product_id);
+        // { productsIds } abrevia { productsIds: productsIds }; não equivale a filtrar id com IN.
         const productsQuery = SELECT.from('sales.Products').where({ productsIds });
+        // as informa o tipo ao TypeScript; não converte nem valida os dados em execução.
         const products = await cds.run(productsQuery) as Products;
+        // for...of percorre os valores; find retorna o primeiro produto correspondente, como READ TABLE.
         for (const item of items) {
             const dbProduct = products.find(product => product.id ===item.product_id);
             if (!dbProduct) {
                 return  request.reject(404, `Produto ${item.product_id} não encontrado`);
             }
+            // Rejeita estoque igual a zero; ainda não compara o saldo com a quantidade pedida.
             if (dbProduct.stock ===0) {
                 return request.reject(400, `Produto ${dbProduct.name}(${dbProduct.id}) sem estoque disponivel`);
             }
         }
     });
-
+    // Após criar o pedido, atualiza o estoque; este evento ainda faz parte do processamento da requisição.
+    service.after('CREATE', 'SalesOrderHeaders', async (results: SalesOrderHeaders) => {
+        // O ternário (condição ? valor : alternativa) normaliza objeto único ou lista para um array.
+        const headersAsArray = Array.isArray(results) ? results : [results] as SalesOrderHeaders;
+        for (const header of headersAsArray) {
+            const items = header.items as SalesOrderItems;
+            // ({ ... }) retorna um objeto por item, contendo apenas os dados necessários à baixa.
+            const productsData = items.map(item => ({
+                id: item.product_id as string,
+                quantity: item.quantity as number
+            }));
+            const productsIds: string[] = productsData.map((productsData) => productsData.id);
+            const productsQuery = SELECT.from('sales.Products').where({ productsIds });
+            const products = await cds.run(productsQuery) as Products;
+            for (const productData of productsData) {
+                const foundProduct = products.find(product => product.id === productData.id) as Product;
+                // Calcula o novo saldo em memória; a instrução seguinte persiste a baixa no banco.
+                foundProduct.stock = (foundProduct.stock as number) - productData.quantity;
+                // Equivale a UPDATE ... SET stock = ... WHERE id = ... em ABAP SQL.
+                await cds.update('sales.Products').where({ id: foundProduct.id }).with({ stock: foundProduct.stock })
+            }
+        }
+    });
 }
