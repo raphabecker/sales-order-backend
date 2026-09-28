@@ -34,4 +34,5 @@ entity Products {
     key id: UUID;
         name: String(255);
         price: Decimal(15,2);
+        stock: Integer;
 }

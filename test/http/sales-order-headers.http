@@ -5,7 +5,8 @@
 @localhost=localhost:4004/odata/v4/main
 @id=27cb0d6b-674d-46bf-b3c5-d9aacce16738
 @customerId=4281de7d-f0bc-4514-9b43-349a7df523b4
-@productId=8dd64f22-69d8-4141-b402-9216d5677437
+@productId1=8dd64f22-69d8-4141-b402-9216d5677437
+@productId2=8dd64f22-69d8-4141-b402-9216d5677437
 # $filter seleciona o pedido pela chave (como WHERE no ABAP SQL); $expand inclui seus itens.
 GET http://localhost:4004/odata/v4/main/SalesOrderHeaders?$filter=id eq {{id}}&$expand=items 
 Content-Type: application/json
@@ -25,14 +26,14 @@ Content-Type: application/json
         {
             "id": "",
             "header_id": "a5bfe73f-34c7-475e-9f1e-dd1a2c369aaf",
-            "product_id": "{{productId}}",
+            "product_id": "{{productId1}}",
             "quantity": 10,
             "price": 2.99
         },
         {
             "id": "",
             "header_id": "1221b741-4815-4f53-8741-1a38ef048fd8",
-            "product_id": "{{productId}}",
+            "product_id": "{{productId2}}",
             "quantity": 5,
             "price": 1.99
         }
