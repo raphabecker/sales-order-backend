@@ -5,7 +5,11 @@ import type { Customers, Product, Products, SalesOrderHeaders, SalesOrderItem, S
 
 // Exporta a função que registra os handlers; a sintaxe => define uma função em JavaScript/TypeScript.
 export default (service: Service) => {
-
+    service.before('READ', '*', (request: Request) => {
+        if (!request.user.is('read_only_user')) {
+            return request.reject(403, 'Não autorizado')
+        }
+    })
     // Executa após a leitura de clientes e ajusta a resposta, sem gravar a alteração no banco.
     service.after('READ', 'Customers', (results: Customers) => {
         // Percorre o resultado como LOOP AT em ABAP; pressupõe uma coleção de clientes.
