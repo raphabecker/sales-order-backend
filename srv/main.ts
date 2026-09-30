@@ -62,6 +62,11 @@ export default (service: Service) => {
                 return request.reject(400, `Produto ${dbProduct.name}(${dbProduct.id}) sem estoque disponivel`);
             }
         }
+        let totalAmount = 0;
+        items.forEach(item => {
+            totalAmount += (item.price as number) . (item.quantity as number);
+        });
+        request.data.totalAmount - totalAmount;
     });
     // Após criar o pedido, atualiza o estoque; este evento ainda faz parte do processamento da requisição.
     service.after('CREATE', 'SalesOrderHeaders', async (results: SalesOrderHeaders) => {
