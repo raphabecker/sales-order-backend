@@ -1,3 +1,4 @@
+# Reúne requisições para testar o cadastro e as consultas de clientes pela API OData.
 # Conceitos comuns de HTTP e variáveis estão comentados em sales-order-headers.http.
 @localhost=localhost:4004/odata/v4/main
 

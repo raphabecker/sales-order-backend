@@ -1,3 +1,4 @@
+# Reúne requisições para testar pedidos com itens e opções de consulta da API OData.
 # Testes HTTP: cada separador abaixo inicia uma requisição independente.
 # @ define variáveis do cliente REST; {{nome}} insere seu valor na requisição.
 # Content-Type declara o corpo como JSON; nas consultas sem corpo, é dispensável.
@@ -5,6 +6,7 @@
 @localhost=localhost:4004/odata/v4/main
 @id=27cb0d6b-674d-46bf-b3c5-d9aacce16738
 @customerId=4281de7d-f0bc-4514-9b43-349a7df523b4
+# IDs dos produtos usados nos itens; atualmente as duas variáveis apontam para o mesmo produto.
 @productId1=8dd64f22-69d8-4141-b402-9216d5677437
 @productId2=8dd64f22-69d8-4141-b402-9216d5677437
 # $filter seleciona o pedido pela chave (como WHERE no ABAP SQL); $expand inclui seus itens.

@@ -1,3 +1,4 @@
+// Implementa as regras do serviço: autorização, validações, cálculo do pedido, estoque e logs.
 // Importa a API do CAP e os tipos TypeScript usados para requisições e serviços.
 import cds, { Request, Service } from '@sap/cds';
 // import type traz apenas tipos gerados do CDS, como tipos DDIC; não carrega valores em execução.
@@ -6,7 +7,9 @@ import { traceProcessWarnings } from 'node:process';
 
 // Exporta a função que registra os handlers; a sintaxe => define uma função em JavaScript/TypeScript.
 export default (service: Service) => {
+    // * aplica a checagem a todas as entidades do serviço antes da leitura.
     service.before('READ', '*', (request: Request) => {
+        // Verifica o papel do usuário, semelhante a AUTHORITY-CHECK; sem ele, retorna HTTP 403.
         if (!request.user.is('read_only_user')) {
             return request.reject(403, 'Não autorizado')
         }
@@ -63,14 +66,18 @@ export default (service: Service) => {
                 return request.reject(400, `Produto ${dbProduct.name}(${dbProduct.id}) sem estoque disponivel`);
             }
         }
+        // let permite atualizar o acumulador do total ao percorrer os itens.
         let totalAmount = 0;
         items.forEach(item => {
+            // A intenção é acumular preço × quantidade, mas o ponto não é um operador de multiplicação.
             totalAmount += (item.price as number) . (item.quantity as number);
         });
+        // Aplica 10% de desconto quando o total ultrapassa 30.000.
         if (totalAmount > 30000) {
             const discount = totalAmount * (10/100)
             totalAmount = totalAmount - discount;
         }
+        // Esta expressão apenas subtrai; para atribuir o total ao pedido, seria necessário usar =.
         request.data.totalAmount - totalAmount;
     });
     // Após criar o pedido, atualiza o estoque; este evento ainda faz parte do processamento da requisição.
@@ -94,13 +101,18 @@ export default (service: Service) => {
                 // Equivale a UPDATE ... SET stock = ... WHERE id = ... em ABAP SQL.
                 await cds.update('sales.Products').where({ id: foundProduct.id }).with({ stock: foundProduct.stock })
             }
+            // JSON.stringify serializa os objetos em texto para guardar uma cópia dos dados no log.
             const headersAsString = JSON.stringify(header);
+            // request dá acesso ao contexto da chamada, incluindo o usuário que criou o pedido.
             const userAsString = JSON.stringify(request.user);
+            // Monta o registro; header_id vincula o log ao pedido pela chave da associação.
             const log = [{
                 header_id: header.id,
                 userData: userAsString,
                 orderData: headersAsString
             }];
+            // Insere o log no banco, como INSERT em ABAP SQL.
+            // Atenção: o CDS declara sales.salesOrderLogs, com s inicial minúsculo.
             await cds.create('sales.SalesOrderLogs').entries(log);
         }
     });

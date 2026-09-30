@@ -1,3 +1,4 @@
+// Define a API da aplicação, expondo as entidades do banco pelo serviço OData.
 // Importa o namespace sales do modelo de dados para referenciar suas entidades.
 using { sales } from '../db/schema';
 
@@ -8,5 +9,6 @@ service MainService {
     entity SalesOrderHeaders as projection on sales.SalesOrderHeaders;
     entity Customers as projection on sales.Customers;
     entity Products as projection on sales.Products;
+    // Disponibiliza os registros de log pela API do mesmo serviço.
     entity salesOrderLogs as projection on sales.salesOrderLogs;
 }
