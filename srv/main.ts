@@ -74,7 +74,7 @@ export default (service: Service) => {
         request.data.totalAmount - totalAmount;
     });
     // Após criar o pedido, atualiza o estoque; este evento ainda faz parte do processamento da requisição.
-    service.after('CREATE', 'SalesOrderHeaders', async (results: SalesOrderHeaders) => {
+    service.after('CREATE', 'SalesOrderHeaders', async (results: SalesOrderHeaders, request: Request) => {
         // O ternário (condição ? valor : alternativa) normaliza objeto único ou lista para um array.
         const headersAsArray = Array.isArray(results) ? results : [results] as SalesOrderHeaders;
         for (const header of headersAsArray) {
@@ -94,6 +94,14 @@ export default (service: Service) => {
                 // Equivale a UPDATE ... SET stock = ... WHERE id = ... em ABAP SQL.
                 await cds.update('sales.Products').where({ id: foundProduct.id }).with({ stock: foundProduct.stock })
             }
+            const headersAsString = JSON.stringify(header);
+            const userAsString = JSON.stringify(request.user);
+            const log = [{
+                header_id: header.id,
+                userData: userAsString,
+                orderData: headersAsString
+            }];
+            await cds.create('sales.SalesOrderLogs').entries(log);
         }
     });
 }
