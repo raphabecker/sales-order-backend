@@ -2,6 +2,7 @@
 import cds, { Request, Service } from '@sap/cds';
 // import type traz apenas tipos gerados do CDS, como tipos DDIC; não carrega valores em execução.
 import type { Customers, Product, Products, SalesOrderHeaders, SalesOrderItem, SalesOrderItems } from '@models/sales';
+import { traceProcessWarnings } from 'node:process';
 
 // Exporta a função que registra os handlers; a sintaxe => define uma função em JavaScript/TypeScript.
 export default (service: Service) => {
@@ -66,6 +67,10 @@ export default (service: Service) => {
         items.forEach(item => {
             totalAmount += (item.price as number) . (item.quantity as number);
         });
+        if (totalAmount > 30000) {
+            const discount = totalAmount * (10/100)
+            totalAmount = totalAmount - discount;
+        }
         request.data.totalAmount - totalAmount;
     });
     // Após criar o pedido, atualiza o estoque; este evento ainda faz parte do processamento da requisição.
