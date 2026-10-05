@@ -4,6 +4,8 @@ import cds, { Request, Service } from '@sap/cds';
 // import type traz apenas tipos gerados do CDS, como tipos DDIC; não carrega valores em execução.
 import type { Customers, Product, Products, SalesOrderHeaders, SalesOrderItem, SalesOrderItems } from '@models/sales';
 import { traceProcessWarnings } from 'node:process';
+import { customerController} from './factories/Controllers/customer.js';
+import { FullRequestParams } from './protocols.js';
 
 // Exporta a função que registra os handlers; a sintaxe => define uma função em JavaScript/TypeScript.
 export default (service: Service) => {
@@ -15,16 +17,8 @@ export default (service: Service) => {
         }
     })
     // Executa após a leitura de clientes e ajusta a resposta, sem gravar a alteração no banco.
-    service.after('READ', 'Customers', (results: Customers) => {
-        // Percorre o resultado como LOOP AT em ABAP; pressupõe uma coleção de clientes.
-        results.forEach(customer => {
-            // ?. evita acessar includes em um valor nulo/indefinido; ! nega a condição.
-            if (!customer.email?.includes('@')) {
-                // A interpolação ${...} monta o texto, como |{ valor }@gmail.com| em ABAP.
-                customer.email = `${customer.email}@gmail.com`;
-            }
-        })
-        
+    service.after('READ', 'Customers', (customersList: Customers, request) => {
+        (request as unknown as FullRequestParams<Customers>).results = customerController.afterRead(customersList);
     });
     // Valida antes de criar o pedido; async permite aguardar a consulta com await.
     service.before('CREATE', 'SalesOrderHeaders', async (request: Request) => {
