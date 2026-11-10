@@ -1,19 +1,26 @@
 node_modules/
+dist/
 target/
 _out/
 gen/
+coverage/
 
+# Local secrets and databases
+.env
+.env.*
+!.env.example
 .cdsrc-private.json
 default-*.json
 *.sqlite
+*.sqlite-*
 
-# MTA
+# CAP build artifacts
 mta_archives/
 *_mta_build_tmp
 *.mtar
 
-# Other
+# OS/editor
 .DS_Store
 
-# @cap-js/cds-typer
-@cds-models
+# Generated CAP typings
+@cds-models/
