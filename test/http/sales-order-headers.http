@@ -1,88 +1,44 @@
-# Reúne requisições para testar pedidos com itens e opções de consulta da API OData.
-# Testes HTTP: cada separador abaixo inicia uma requisição independente.
-# @ define variáveis do cliente REST; {{nome}} insere seu valor na requisição.
-# Content-Type declara o corpo como JSON; nas consultas sem corpo, é dispensável.
-# Endereço do CAP local e caminho do serviço MainService.
-@localhost=localhost:4004/odata/v4/main
-@id=27cb0d6b-674d-46bf-b3c5-d9aacce16738
-@customerId=4281de7d-f0bc-4514-9b43-349a7df523b4
-# IDs dos produtos usados nos itens; atualmente as duas variáveis apontam para o mesmo produto.
-@productId1=8dd64f22-69d8-4141-b402-9216d5677437
-@productId2=8dd64f22-69d8-4141-b402-9216d5677437
-# $filter seleciona o pedido pela chave (como WHERE no ABAP SQL); $expand inclui seus itens.
-GET http://localhost:4004/odata/v4/main/SalesOrderHeaders?$filter=id eq {{id}}&$expand=items 
-Content-Type: application/json
+@base = http://127.0.0.1:4004/odata/v4/main
+@customer = 38373147-201c-4e8d-bef6-165e14070769
+@dock = 8dd64f22-69d8-4141-b402-9216d5677437
 
-###
-# POST cria o pedido; items envia os filhos da Composition junto com o cabeçalho (deep insert).
-# customers_id e product_id são chaves das associações, como referências entre tabelas ABAP.
-# Os itens têm id vazio e header_id diferente do cabeçalho; revise esses valores antes de testar.
-POST http://localhost:4004/odata/v4/main/SalesOrderHeaders
+### Catalog
+GET {{base}}/Products?$filter=stock gt 0&$orderby=name&$top=10
+Authorization: Basic reader:reader-local-only
+
+### Create: 2 x 299.90 = 599.80
+# @name createOrder
+POST {{base}}/SalesOrderHeaders
+Authorization: Basic sales:sales-local-only
 Content-Type: application/json
 
 {
-    "id": "{{id}}",
-    "customers_id": "{{customerId}}",
-    "items": [
-        {
-            "id": "",
-            "header_id": "a5bfe73f-34c7-475e-9f1e-dd1a2c369aaf",
-            "product_id": "{{productId1}}",
-            "quantity": 10,
-            "price": 2.99
-        },
-        {
-            "id": "",
-            "header_id": "1221b741-4815-4f53-8741-1a38ef048fd8",
-            "product_id": "{{productId2}}",
-            "quantity": 5,
-            "price": 1.99
-        }
-    ]
+  "customers_id": "{{customer}}",
+  "items": [{ "product_id": "{{dock}}", "quantity": 2 }]
 }
-###
-# DELETE remove pela chave; 1234 não corresponde ao tipo UUID definido no modelo.
-DELETE  http://localhost:4004/odata/v4/main/SalesOrderHeaders(id=1234)
+
+### Inspect the order and its items; run createOrder first
+GET {{base}}/SalesOrderHeaders({{createOrder.response.body.$.id}})?$expand=items,customers
+Authorization: Basic reader:reader-local-only
+
+### Cancel; repeating this restores stock only once
+POST {{base}}/SalesOrderHeaders({{createOrder.response.body.$.id}})/MainService.cancel
+Authorization: Basic sales:sales-local-only
 Content-Type: application/json
+If-Match: *
 
-###
+{}
 
-# PUT envia uma atualização; para um pedido específico, a URL precisa identificar sua chave.
-# modifieBy não existe no modelo; o campo de auditoria é modifiedBy, gerenciado pelo CAP.
-PUT http://{{localhost}}/SalesOrderHeaders
+### Inspect audit events as admin
+GET {{base}}/SalesOrderLogs?$filter=header_id eq {{createOrder.response.body.$.id}}
+Authorization: Basic admin:admin-local-only
+
+### Reader cannot create an order: expect 403
+POST {{base}}/SalesOrderHeaders
+Authorization: Basic reader:reader-local-only
 Content-Type: application/json
 
 {
-    "modifieBy": "teste"
+  "customers_id": "{{customer}}",
+  "items": [{ "product_id": "{{dock}}", "quantity": 1 }]
 }
-
-###
-
-# le significa menor ou igual (<=); filtra pedidos pelo valor total.
-GET http://localhost:4004/odata/v4/main/SalesOrderHeaders?$filter=totalAmount le 2000000
-
-###
-
-# Aqui, inclui itens de todos os pedidos retornados, sem filtrar uma chave.
-GET http://localhost:4004/odata/v4/main/SalesOrderHeaders?$expand=items
-
-###
-# $select limita as propriedades retornadas, como a lista de colunas de um SELECT ABAP.
-# customer não existe no modelo atual; a associação se chama customers.
-GET http://{{localhost}}/SalesOrderHeaders?$select=id,customer
-
-###
-# Retorna apenas a quantidade de pedidos, semelhante a SELECT COUNT(*) em ABAP.
-GET http://{{localhost}}/SalesOrderHeaders/$count
-
-###
-# Pula os cinco primeiros registros; combine com $top e $orderby para paginação ordenada.
-GET http://{{localhost}}/SalesOrderHeaders?$skip=5
-
-###
-# Limita o retorno a cinco registros, semelhante a UP TO 5 ROWS em ABAP.
-GET http://{{localhost}}/SalesOrderHeaders?$top=5
-
-###
-# $search busca o texto "email" nos campos pesquisáveis; não seleciona a propriedade email.
-GET http://{{localhost}}/SalesOrderHeaders?$search=email

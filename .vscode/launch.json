@@ -2,19 +2,14 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "cds serve",
+      "name": "Sales Order API",
       "request": "launch",
       "type": "node",
       "cwd": "${workspaceFolder}",
-      "runtimeExecutable": "cds",
-      "args": [
-        "serve",
-        "--with-mocks",
-        "--in-memory?"
-      ],
-      "skipFiles": [
-        "<node_internals>/**"
-      ]
+      "runtimeArgs": ["--import", "tsx"],
+      "program": "${workspaceFolder}/scripts/serve.mjs",
+      "env": { "NODE_ENV": "development" },
+      "skipFiles": ["<node_internals>/**"]
     }
   ]
 }

@@ -1,23 +1,36 @@
 {
   "name": "sales-order-backend",
-  "version": "1.0.0",
+  "version": "0.2.0",
+  "description": "Transactional sales orders, inventory and audit history with SAP CAP and TypeScript",
   "type": "module",
   "dependencies": {
-    "@sap/cds": "^10"
+    "@sap/cds": "^10.1.1"
   },
   "devDependencies": {
-    "@cap-js/cds-typer": "^0.41.1",
     "@cap-js/cds-types": "^0.20.0",
-    "@cap-js/sqlite": "^3",
-    "@types/axios": "^0.14.4",
-    "@types/node": "^26.6.2",
-    "git-commit-msg-linter": "^5.0.9",
+    "@cap-js/sqlite": "^3.1.1",
+    "@eslint/js": "^9.39.0",
+    "@types/node": "^22.19.0",
+    "better-sqlite3": "^12.11.1",
+    "sql.js": "^1.13.0",
     "tsx": "^4.23.15",
-    "typescript": "^7.0.2"
+    "typescript": "~5.9.3"
   },
   "scripts": {
-    "start": "cds-serve",
-    "dev": "DEBUG=db cds-tsx watch"
+    "start": "npm run build && node scripts/serve.mjs --built",
+    "dev": "node --import tsx scripts/serve.mjs",
+    "dev:persistent": "node --import tsx scripts/serve.mjs --persistent",
+    "start:persistent": "npm run build && node scripts/serve.mjs --built --persistent",
+    "demo": "node scripts/demo.mjs",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc -p tsconfig.build.json && node scripts/build.mjs",
+    "test": "node --import tsx --test --test-concurrency=1 test/*.test.ts",
+    "test:built": "node scripts/test-built.mjs",
+    "test:persistent": "node scripts/test-persistent.mjs",
+    "check": "npm run typecheck && npm test && npm run build && npm run test:built && npm run test:persistent"
+  },
+  "engines": {
+    "node": ">=22.12.0"
   },
   "private": true
 }

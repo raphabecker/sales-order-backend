@@ -1,21 +1,18 @@
 {
-  // Visit https://aka.ms/tsconfig to read more about this file
   "compilerOptions": {
-    "target": "ES2024",
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     "types": ["node", "@cap-js/cds-types"],
-    "module": "node16",
-    "moduleResolution": "node16",
     "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "verbatimModuleSyntax": true,
     "skipLibCheck": true,
-    "strictNullChecks": true,
-    "noImplicitAny": true,
     "esModuleInterop": true,
-    "outDir": "./dist",
-    "rootDir": "./",
-    "paths": {
-        "@models/*": ["./@cds-models/*/index.d.ts"]
-    }
+    "outDir": "dist",
+    "rootDir": "."
   },
-    "include": ["srv"],
-    "exclude": ["node_modules"]
+  "include": ["srv/**/*.ts", "test/**/*.ts"],
+  "exclude": ["node_modules", "dist", "@cds-models"]
 }

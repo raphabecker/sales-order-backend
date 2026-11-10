@@ -1,5 +1,5 @@
-import { Customers } from "@models/sales";
+import type { CustomerProps } from '../../models/customer.js';
 
 export interface CustomerService {
-    afterRead(customerList: Customers): Customers;
+  prepare(data: CustomerProps): CustomerProps;
 }

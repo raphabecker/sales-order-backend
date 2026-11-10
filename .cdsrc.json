@@ -1,33 +1,21 @@
 {
-    "[development]": {
-        "requires": {
-            "db":{
-                "credentials": {
-                    "database": ":memory:"
-                },
-                "kind": "sqlite"
-            },
-            "auth": {
-                "kind": "basic",
-                "users": {
-                    "cuka": {
-                        "password": "Inical@12345",
-                        "roles": ["admin"],
-                        "attr": {
-                            "id": 1,
-                            "groups": ["grupo1", "grupo2"],
-                        }
-                    },
-                    "joaozinho": {
-                        "password": "Inical@12345",
-                        "roles": ["read_only_user"],
-                         "attr": {
-                            "id": 2,
-                            "groups": ["grupo1"],
-                        }
-                    }
-                }
-            }
+  "server": { "cors": false },
+  "[development]": {
+    "requires": {
+      "db": {
+        "kind": "sqlite",
+        "driver": "sql.js",
+        "credentials": { "url": ":memory:" }
+      },
+      "auth": {
+        "kind": "basic",
+        "users": {
+          "admin": { "password": "admin-local-only", "roles": ["admin"] },
+          "sales": { "password": "sales-local-only", "roles": ["sales_rep"] },
+          "reader": { "password": "reader-local-only", "roles": ["read_only_user"] },
+          "*": false
         }
+      }
     }
+  }
 }

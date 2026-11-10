@@ -1,11 +1,11 @@
-import { Customers } from "@models/sales";
-import { CustomerController } from "./protocols.js";
-import { CustomerService } from "../../services/customer/protocols.js";
+import type { CustomerProps } from '../../models/customer.js';
+import type { CustomerController } from './protocols.js';
+import type { CustomerService } from '../../services/customer/protocols.js';
 
 export class CustomerControllerImpl implements CustomerController {
-    constructor(private readonly service: CustomerService) {}
-    
-    public afterRead(customerList: Customers): Customers {
-        return this.service.afterRead(customerList);
-    }
+  constructor(private readonly service: CustomerService) {}
+
+  beforeWrite(data: CustomerProps): CustomerProps {
+    return this.service.prepare(data);
+  }
 }

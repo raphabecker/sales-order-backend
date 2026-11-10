@@ -1,113 +1,80 @@
-// Implementa as regras do serviço: autorização, validações, cálculo do pedido, estoque e logs.
-// Importa a API do CAP e os tipos TypeScript usados para requisições e serviços.
-import cds, { Request, Service } from '@sap/cds';
-// import type traz apenas tipos gerados do CDS, como tipos DDIC; não carrega valores em execução.
-import type { Customers, Product, Products, SalesOrderHeaders, SalesOrderItem, SalesOrderItems } from '@models/sales';
-import { traceProcessWarnings } from 'node:process';
-import { customerController} from './factories/Controllers/customer.js';
-import { FullRequestParams } from './protocols.js';
+import cds from '@sap/cds';
+import type { Request, Service } from '@sap/cds';
+import { customerController } from './factories/Controllers/customer.js';
+import { DomainError } from './models/errors.js';
+import { formatMoney, toCents } from './models/money.js';
+import type { OrderRecord } from './models/sales-order-header.js';
+import { CapOrderRepository } from './repositories/orders/implementation.js';
+import { OrderService } from './services/orders/implementation.js';
 
-// Exporta a função que registra os handlers; a sintaxe => define uma função em JavaScript/TypeScript.
-export default (service: Service) => {
-    // * aplica a checagem a todas as entidades do serviço antes da leitura.
-    service.before('READ', '*', (request: Request) => {
-        // Verifica o papel do usuário, semelhante a AUTHORITY-CHECK; sem ele, retorna HTTP 403.
-        if (!request.user.is('read_only_user')) {
-            return request.reject(403, 'Não autorizado')
-        }
-    })
-    // Executa após a leitura de clientes e ajusta a resposta, sem gravar a alteração no banco.
-    service.after('READ', 'Customers', (customersList: Customers, request) => {
-        (request as unknown as FullRequestParams<Customers>).results = customerController.afterRead(customersList);
-    });
-    // Valida antes de criar o pedido; async permite aguardar a consulta com await.
-    service.before('CREATE', 'SalesOrderHeaders', async (request: Request) => {
-        // Acessa os dados recebidos; const impede reatribuir a variável, mas não torna o objeto imutável.
-        const params = request.data;
-        // Tipagem da coleção de itens, semelhante à declaração de uma tabela interna ABAP.
-        const items: SalesOrderItems = params.items;
-        // Confere a referência ao cliente; o nome precisa coincidir com o campo exposto no serviço.
-        if (!params.customer_id) {
-            // Interrompe a criação com erro HTTP 400 (dados inválidos).
-            return request.reject(400, 'Customer inválido');
-        }
-        // || significa OU; === compara sem conversão de tipo. Atenção: lenght deveria ser length.
-        if (!params.items || params.items?.lenght ===0) {
-            return request.reject(400, 'items inválidos');
-        }
-        // Monta uma consulta CQL de um único cliente, semelhante a SELECT SINGLE ... WHERE em ABAP.
-        const customerQuery = SELECT.one.from('sales.Customers').where({ id: params.customer_id });
-        // Executa a consulta; await aguarda o resultado da Promise antes de continuar neste handler.
-        const customer = await cds.run(customerQuery);
-        // Sem cliente correspondente, rejeita com HTTP 404 (não encontrado).
-        if (!customer) {
-            return request.reject(404, 'Customer não encontrado');
-        }
-        // map cria um array de IDs a partir dos itens, semelhante a VALUE ... FOR em ABAP.
-        const productsIds: string[] = params.items.map((item: SalesOrderItem) => item.product_id);
-        // { productsIds } abrevia { productsIds: productsIds }; não equivale a filtrar id com IN.
-        const productsQuery = SELECT.from('sales.Products').where({ productsIds });
-        // as informa o tipo ao TypeScript; não converte nem valida os dados em execução.
-        const products = await cds.run(productsQuery) as Products;
-        // for...of percorre os valores; find retorna o primeiro produto correspondente, como READ TABLE.
-        for (const item of items) {
-            const dbProduct = products.find(product => product.id ===item.product_id);
-            if (!dbProduct) {
-                return  request.reject(404, `Produto ${item.product_id} não encontrado`);
-            }
-            // Rejeita estoque igual a zero; ainda não compara o saldo com a quantidade pedida.
-            if (dbProduct.stock ===0) {
-                return request.reject(400, `Produto ${dbProduct.name}(${dbProduct.id}) sem estoque disponivel`);
-            }
-        }
-        // let permite atualizar o acumulador do total ao percorrer os itens.
-        let totalAmount = 0;
-        items.forEach(item => {
-            // A intenção é acumular preço × quantidade, mas o ponto não é um operador de multiplicação.
-            totalAmount += (item.price as number) . (item.quantity as number);
-        });
-        // Aplica 10% de desconto quando o total ultrapassa 30.000.
-        if (totalAmount > 30000) {
-            const discount = totalAmount * (10/100)
-            totalAmount = totalAmount - discount;
-        }
-        // Esta expressão apenas subtrai; para atribuir o total ao pedido, seria necessário usar =.
-        request.data.totalAmount - totalAmount;
-    });
-    // Após criar o pedido, atualiza o estoque; este evento ainda faz parte do processamento da requisição.
-    service.after('CREATE', 'SalesOrderHeaders', async (results: SalesOrderHeaders, request: Request) => {
-        // O ternário (condição ? valor : alternativa) normaliza objeto único ou lista para um array.
-        const headersAsArray = Array.isArray(results) ? results : [results] as SalesOrderHeaders;
-        for (const header of headersAsArray) {
-            const items = header.items as SalesOrderItems;
-            // ({ ... }) retorna um objeto por item, contendo apenas os dados necessários à baixa.
-            const productsData = items.map(item => ({
-                id: item.product_id as string,
-                quantity: item.quantity as number
-            }));
-            const productsIds: string[] = productsData.map((productsData) => productsData.id);
-            const productsQuery = SELECT.from('sales.Products').where({ productsIds });
-            const products = await cds.run(productsQuery) as Products;
-            for (const productData of productsData) {
-                const foundProduct = products.find(product => product.id === productData.id) as Product;
-                // Calcula o novo saldo em memória; a instrução seguinte persiste a baixa no banco.
-                foundProduct.stock = (foundProduct.stock as number) - productData.quantity;
-                // Equivale a UPDATE ... SET stock = ... WHERE id = ... em ABAP SQL.
-                await cds.update('sales.Products').where({ id: foundProduct.id }).with({ stock: foundProduct.stock })
-            }
-            // JSON.stringify serializa os objetos em texto para guardar uma cópia dos dados no log.
-            const headersAsString = JSON.stringify(header);
-            // request dá acesso ao contexto da chamada, incluindo o usuário que criou o pedido.
-            const userAsString = JSON.stringify(request.user);
-            // Monta o registro; header_id vincula o log ao pedido pela chave da associação.
-            const log = [{
-                header_id: header.id,
-                userData: userAsString,
-                orderData: headersAsString
-            }];
-            // Insere o log no banco, como INSERT em ABAP SQL.
-            // Atenção: o CDS declara sales.salesOrderLogs, com s inicial minúsculo.
-            await cds.create('sales.SalesOrderLogs').entries(log);
-        }
-    });
+const { SELECT } = cds.ql;
+
+async function handle<T>(request: Request, operation: () => T | Promise<T>): Promise<T> {
+  try {
+    return await operation();
+  } catch (error) {
+    if (error instanceof DomainError) return request.reject(error.status, error.message, error.target);
+    throw error;
+  }
 }
+
+export default (service: Service) => {
+  const orders = new OrderService(new CapOrderRepository());
+
+  service.on('error', error => {
+    // The WASM SQLite driver reports uniqueness failures without a driver error code.
+    if (/^UNIQUE constraint failed:/.test(error.message)) {
+      Object.assign(error, {
+        code: 'UNIQUE_CONFLICT', status: 409, statusCode: 409,
+        message: 'A record with these unique fields already exists',
+      });
+    }
+  });
+
+  service.before(['CREATE', 'UPDATE'], 'Customers', request => handle(request, () => {
+    Object.assign(request.data, customerController.beforeWrite(request.data));
+  }));
+
+  service.before(['CREATE', 'UPDATE'], 'Products', request => handle(request, () => {
+    const data = request.data;
+    if ('name' in data) {
+      if (typeof data.name !== 'string' || !data.name.trim()) throw new DomainError(400, 'Product name is required', 'name');
+      data.name = data.name.trim();
+    }
+    if ('price' in data) data.price = formatMoney(toCents(data.price));
+    if ('stock' in data && (!Number.isInteger(data.stock) || data.stock < 0 || data.stock > 2_147_483_647)) {
+      throw new DomainError(400, 'Stock must be a non-negative 32-bit integer', 'stock');
+    }
+  }));
+
+  for (const [entity, table, foreignKey] of [
+    ['Customers', 'sales.SalesOrderHeaders', 'customers_id'],
+    ['Products', 'sales.SalesOrderItems', 'product_id'],
+  ]) {
+    service.before('DELETE', entity!, request => handle(request, async () => {
+      const id = (request.params[0] as { id: string }).id;
+      const used = await cds.run(SELECT.one.from(table!).columns('id').where({ [foreignKey!]: id }));
+      if (used) throw new DomainError(409, 'Referenced records cannot be deleted');
+    }));
+  }
+
+  service.before('CREATE', 'SalesOrderHeaders', request => handle(request, async () => {
+    if ('customers' in request.data) {
+      throw new DomainError(400, 'Use customers_id to reference an existing customer', 'customers');
+    }
+    const priced = await orders.prepareCreation(request.data);
+    request.data.id ??= cds.utils.uuid();
+    Object.assign(request.data, priced);
+    // Discard client-supplied header links and use only validated item fields.
+    request.data.items = priced.items.map(item => ({ ...item, id: item.id ?? cds.utils.uuid() }));
+  }));
+
+  service.after('CREATE', 'SalesOrderHeaders', (_result: unknown, request: Request) => handle(request, async () => {
+    await orders.recordCreation(request.data as OrderRecord, request.user.id);
+  }));
+
+  service.on('cancel', 'SalesOrderHeaders', request => handle(request, async () => {
+    const id = (request.params[0] as { id: string }).id;
+    return orders.cancel(id, request.user.id);
+  }));
+};

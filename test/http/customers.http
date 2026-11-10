@@ -1,51 +1,31 @@
-# Reúne requisições para testar o cadastro e as consultas de clientes pela API OData.
-# Conceitos comuns de HTTP e variáveis estão comentados em sales-order-headers.http.
-@localhost=localhost:4004/odata/v4/main
+@base = http://127.0.0.1:4004/odata/v4/main
+@customer = 38373147-201c-4e8d-bef6-165e14070769
 
-@id=27cb0d6b-674d-46bf-b3c5-d9aacce16738
+### List as reader
+GET {{base}}/Customers
+Authorization: Basic reader:reader-local-only
 
-# Esta consulta ainda aponta para pedidos, embora esteja no arquivo de clientes.
-GET http://localhost:4004/odata/v4/main/SalesOrderHeaders
-Content-Type: application/json
+### Read selected properties
+GET {{base}}/Customers({{customer}})?$select=id,firstName
+Authorization: Basic reader:reader-local-only
 
-###
-# Cria somente o cliente, sem itens aninhados; o id está comentado no corpo abaixo.
-POST http://{{localhost}}/Customers
-Content-Type: application/json
-
-{
-   // "id": "{{id}}",
-    "firstName": "Lucas",
-    "lastName": "Cardoso",
-    "email": "lucas.cardoso@moovi.com"
-}
-
-###
-# Usa a variável id para identificar o cliente a excluir.
-DELETE http://{{localhost}}/Customers(id={{id}})
-Content-Type: application/json
-
-###
-
-# PATCH atualiza apenas os campos enviados, como UPDATE ... SET em ABAP.
-# O corpo usa firsName, mas o campo declarado no modelo é firstName.
-PATCH http://{{localhost}}/Customers(id={{id}})
+### Create as admin; change the email before repeating
+POST {{base}}/Customers
+Authorization: Basic admin:admin-local-only
 Content-Type: application/json
 
 {
-    "firsName": "John"
+  "firstName": "Carla",
+  "lastName": "Lima",
+  "email": "carla@example.com"
 }
 
-###
-# Exclui do resultado os clientes cujo firstName termina com o sufixo indicado.
-GET http://{{localhost}}/Customers?$filter=not endswith(firstName,'-3837314')
-
-###
-# Aqui, o termo buscado é o texto "firstName2", não um nome de campo.
-GET http://{{localhost}}/Customers?$search=firstName2
+### Update using an explicit wildcard version
+PATCH {{base}}/Customers({{customer}})
+Authorization: Basic admin:admin-local-only
 Content-Type: application/json
+If-Match: *
 
-###
-# Ordena por nome em ordem crescente, equivalente a ORDER BY firstName ASCENDING em ABAP.
-GET http://{{localhost}}/Customers?$orderby=firstName asc
-Content-Type: application/json
+{
+  "lastName": "Silva"
+}

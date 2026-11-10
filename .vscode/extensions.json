@@ -1,9 +1,3 @@
 {
-	"recommendations": [
-		"SAPSE.vscode-cds",
-		"dbaeumer.vscode-eslint",
-		"mechatroner.rainbow-csv",
-		"qwtel.sqlite-viewer",
-		"humao.rest-client"
-	]
+  "recommendations": ["SAPSE.vscode-cds", "humao.rest-client", "mechatroner.rainbow-csv"]
 }
